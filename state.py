@@ -6,6 +6,8 @@ from unidecode import unidecode
 import random
 import json
 
+VERSION = 1.0
+
 class Mode(Enum):
     IDLE = 1
     SEARCH = 2
@@ -156,8 +158,9 @@ class State():
 
             #dump our params dict to user
             if command == "params" : 
+                header = f"Bot version : {VERSION:.2f}\n"
                 params_string = json.dumps(self.params, indent=2)
-                await message.channel.send(params_string)
+                await message.channel.send(header+params_string)
                 return
             
             elif command == "param" : 
