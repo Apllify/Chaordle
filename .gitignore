@@ -1,2 +1,3 @@
 *.secret
+spec.txt
 __pycache__/

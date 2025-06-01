@@ -6,7 +6,7 @@ from unidecode import unidecode
 import random
 import json
 
-VERSION = 1.0
+VERSION = 1.1
 
 class Mode(Enum):
     IDLE = 1
@@ -14,7 +14,7 @@ class Mode(Enum):
     PUZZLE = 3
 
 default_params = {
-    "min_letters" : 8,
+    "min_letters" : 5,
     "max_letters" : 15,
     "force_uncommon" : True,
     "lookup_depth" : 5000, 
@@ -106,6 +106,7 @@ class State():
         self.bot = bot
 
         self.puzzle_channel = None
+        self.puzzle_user = None
         self.secret_word = "ZZZZZZ"
         self.secret_word_link = "[UNAVAILABLE]"
 
@@ -126,19 +127,34 @@ class State():
             try : 
                 channel_id = int(content.split()[1])
             except: 
-                await message.channel.send("Invalid syntax : command must be of form ```!chaordle [channel_id]```")
+                await message.channel.send("Invalid syntax : command must be of form ```!chaordle [channel_id] [optional:user_id]```")
                 return
             
             #check that channel exists
             try : 
                 channel = await message.guild.fetch_channel(channel_id)
             except:
-                await message.channel.send("Invalid channel id provided. Reminder : command must be of form ```!chaordle [channel_id]```")
+                await message.channel.send("Invalid channel id provided. Reminder : command must be of form ```!chaordle [channel_id] [optional:user_id]```")
                 return 
             
+            #check for user id argument 
+            user = None
+            if (len(content.split()) >= 3):
+                try :
+                    user_id = int(content.split()[2])
+                    user = await message.guild.fetch_member(user_id)
+                except :
+                    await message.channel.send("Invalid user id provided. Reminder : command must be of form ```!chaordle [channel_id] [optional:user_id]```")
+                    return
+
+            #send message for puzzle start
+            user_complement = f" posted by `{user.name}`" if user != None else ""
+            await message.channel.send(f"Searching for valid word in `{channel.name}`{user_complement}...")
+
             #begin the puzzle
-            success = await self.start_puzzle(channel)
+            success = await self.start_puzzle(channel, user)
             if not success : 
+                await message.channel.send("Failed to find a valid word!")
                 warn("puzzle starting failed", True)
                 return
 
@@ -166,7 +182,8 @@ class State():
             elif command == "param" : 
                 #try parse user input 
                 try : 
-                    name, value = content.split()[1:3]
+                    name = content.split()[1]
+                    value = " ".join(content.split()[2:])
                 except : 
                     await message.channel.send("Command syntax error. Reminder : command must be of form ```!param [param_name] [param_value]```")
                     return 
@@ -183,7 +200,7 @@ class State():
         
         
 
-    async def start_puzzle(self, channel) -> bool:
+    async def start_puzzle(self, channel, user = None) -> bool:
         """
         Begins the puzzle
         """
@@ -193,6 +210,7 @@ class State():
         
         self.mode = Mode.SEARCH
         self.puzzle_channel = channel
+        self.puzzle_user = user
 
         self.guess_history = [] 
 
@@ -210,6 +228,10 @@ class State():
         #load the full message history by non-self senders
         messages = [message async for message in channel.history(limit=self.params["lookup_depth"])]
         messages = [message for message in messages if message.author != self.bot]
+
+        #special check if user argument is specified 
+        if self.puzzle_user != None :
+            messages = [message for message in messages if message.author.id == self.puzzle_user.id]
 
         #transform into pairs for each word
         text_pairs = [(message.content, message) for message in messages]

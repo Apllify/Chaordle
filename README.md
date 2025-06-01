@@ -1,5 +1,5 @@
 # Usage guide 
-```!chaordle [channel_id] ``` \
+```!chaordle [channel_id] [optional:user_id]``` \
 Begin a chaordle with a message pulled from the specified channel.
 
 ```!params``` \
