@@ -6,7 +6,7 @@ from unidecode import unidecode
 import random
 import json
 
-VERSION = 1.1
+VERSION = 1.2
 
 class Mode(Enum):
     IDLE = 1
@@ -14,7 +14,7 @@ class Mode(Enum):
     PUZZLE = 3
 
 default_params = {
-    "min_letters" : 5,
+    "min_letters" : 7,
     "max_letters" : 15,
     "force_uncommon" : True,
     "lookup_depth" : 5000, 
@@ -367,12 +367,12 @@ class State():
 
 
 #load both language dictionaries 
-with open("words/english.txt", "r") as english:
+with open("words/english_20.txt", "r") as english:
     english_dict = set()
     for word in english.readlines():
         english_dict.add(word.strip())
 
-with open("words/french.txt", "r", encoding="utf-8") as french:
+with open("words/french_20.txt", "r", encoding="utf-8") as french:
     #remove accents from all words before adding 
     french_dict = set()
     for word in french.readlines():
