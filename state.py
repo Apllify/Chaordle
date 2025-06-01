@@ -6,7 +6,7 @@ from unidecode import unidecode
 import random
 import json
 
-VERSION = 1.2
+VERSION = 1.3
 
 class Mode(Enum):
     IDLE = 1
@@ -148,8 +148,8 @@ class State():
                     return
 
             #send message for puzzle start
-            user_complement = f" posted by `{user.name}`" if user != None else ""
-            await message.channel.send(f"Searching for valid word in `{channel.name}`{user_complement}...")
+            user_complement = f" posted by `@{user.name}`" if user != None else ""
+            await message.channel.send(f"Searching for valid word in `#{channel.name}`{user_complement}...")
 
             #begin the puzzle
             success = await self.start_puzzle(channel, user)
@@ -221,30 +221,32 @@ class State():
         return True
 
 
-    async def fetch_word(self, channel):
+    async def fetch_word(self, channel) -> None:
         """
         Scour channel for random valid word
         """
-        #load the full message history by non-self senders
-        messages = [message async for message in channel.history(limit=self.params["lookup_depth"])]
-        messages = [message for message in messages if message.author != self.bot]
-
-        #special check if user argument is specified 
-        if self.puzzle_user != None :
-            messages = [message for message in messages if message.author.id == self.puzzle_user.id]
-
-        #transform into pairs for each word
-        text_pairs = [(message.content, message) for message in messages]
+        #randomly decide whether iterate from oldest or newest
         word_pairs = []
-        for (text, msg) in text_pairs : 
-            words = text.split()
-            for word in words : 
+        order = (random.random() > 0.5)
+        async for message in channel.history(limit=self.params["lookup_depth"], oldest_first = order):
+
+            #ignore self messages
+            if message.author == self.bot:
+                continue
+
+            #only allow specific user if feature toggled
+            if self.puzzle_user != None and message.author.id != self.puzzle_user.id:
+                continue
+
+            #iterate over words
+            for word in message.content.split():
                 #remove accents+capitalization
                 clean_word = unidecode(word.lower())
                 
                 #add the pair if word valid
                 if self.is_word_valid(clean_word):
-                    word_pairs.append((clean_word, msg))
+                    word_pairs.append((clean_word, message))
+
 
 
         if len(word_pairs) == 0:
